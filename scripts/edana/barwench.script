@@ -1,8 +1,7 @@
 //Bar Wench - sells...erm....'beer'
 
 {
-	setvard GAVE_SOUP_LIST ''
-	setvard GAVE_SOUP_LIST2 ''
+	setvard SOUP_LEFT 5
 
 	const SOUND_DEATH none			//base_npc
 
@@ -55,6 +54,7 @@
 {
   repeatdelay $randf(30,45)
 
+  if game.time > NEXT_HELLO
   if $cansee(player,128)
 
   saytext Hello there.
@@ -77,14 +77,8 @@
   	say [.3] [.3] [.3] [.2] [.1] [.3] [.1]
 	callevent convo_anim
 	setmovedest PARAM1 9999
-
-	local L_GOT_SOUP $get_quest_data(VENDOR_TARGET,sy)
-	if L_GOT_SOUP > 0
-	if ( $get_find_token(GAVE_SOUP_LIST,L_PLR_STEAMID) > -1 ) local EXIT_SUB 1 //just so we don't spam it
-	if !EXIT_SUB
-	token.add GAVE_SOUP_LIST L_PLR_STEAMID
-	callevent bchat_mouth_move 4.0
-	saytext Oh hi there. I remember you. Come for some of Sylphee's soup? It's not cheap - no more free samples!
+	setvard NEXT_HELLO game.time
+	add NEXT_HELLO 60
 }
 
 {
@@ -94,18 +88,49 @@
    addstoreitem  STORE_NAME     drink_mead           20  	100
    addstoreitem  STORE_NAME     drink_ale            20  	100
    addstoreitem  STORE_NAME     drink_wine           20  	100
+}
 
+{ game_menu_getoptions
 
-	local L_PLR_STEAMID $get(VENDOR_TARGET,steamid)
+	local reg.mitem.title "Order Soup"
+	if ( SOUP_LEFT > 0 )
+	{
+		local reg.mitem.type payment
+		local reg.mitem.data "health_spotion;drink_mead;mana_mpotion;health_apple:3;gold:200"
+		local reg.mitem.callback give_soup
+		local reg.mitem.cb_failed soup_price
+	}
+	else
+	{
+		local reg.mitem.type callback
+		local reg.mitem.callback soup_out
+	}
+	menuitem.register
+}
 
-	//if ( $get_find_token(GAVE_SOUP_LIST2,L_PLR_STEAMID) > -1 ) exitevent
+{ give_soup
 
-	local L_GOT_SOUP $get_quest_data(VENDOR_TARGET,sy)
-	if L_GOT_SOUP > 0
-	if ( L_GOT_SOUP > 5 ) local L_GOT_SOUP 5
-	addstoreitem STORE_NAME mana_soup L_GOT_SOUP 100
+	subtract SOUP_LEFT 1
+	offer PARAM1 mana_soup
+	helptip PARAM1 generic "Sylphiel's Soup" "Provides full health and three minutes of rapid mana regeneration"
+	setmovedest PARAM1 9999
+	playanim once push_button
+	saytext One bowl of Sylphee's soup, fresh off the fire. Enjoy!
+	callevent convo_anim
+}
 
-	//token.add GAVE_SOUP_LIST2 L_PLR_STEAMID
+{ soup_price
+
+	setmovedest PARAM1 9999
+	saytext Soup's not free, love. Bring me a strong health potion, a mead, a mana potion, three apples and 200 gold.
+	callevent convo_anim
+}
+
+{ soup_out
+
+	setmovedest PARAM1 9999
+	saytext Sorry, the pot's empty. I'll need to cook up another batch, come back and see me later.
+	callevent convo_anim
 }
 
 {
@@ -273,14 +298,4 @@
 { say_rumour3
 
 	saytext If that's true, we can't go and see the dwarves or elves anymore.
-}
-
-{ game_gave_player //<player> <item>
-	if $get(PARAM2,itemname) contains soup
-	if game.time > NEXT_THANK_YOU
-	setvard NEXT_THANK_YOU game.time
-	add NEXT_THANK_YOU 60.0
-	saytext Thanks again for helping out with those goblins at gran's old place. Come by again sometime!
-	say [.3] [.3] [.3] [.2] [.1] [.3] [.1]
-	callevent convo_anim
 }
